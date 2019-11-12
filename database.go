@@ -55,14 +55,14 @@ func QueryScans(address string) ([]ScanResult, error) {
 	if err != nil {
 		return []ScanResult{}, err
 	}
-	rows, err := db.Query(`SELECT ts FROM portscans WHERE address = ?`, address)
+	rows, err := db.Query(`SELECT ts FROM portscans WHERE address = ? ORDER BY ts DESC`, address)
 	if err != nil {
 		return []ScanResult{}, err
 	}
 	defer rows.Close()
 	res := []ScanResult{}
 	for rows.Next() {
-		var ts string
+		var ts int64
 		if err := rows.Scan(&ts); err != nil {
 			return res, err
 		}
@@ -75,7 +75,7 @@ func QueryScans(address string) ([]ScanResult, error) {
 	return res, nil
 }
 
-func QueryScanResult(address string, ts string) (ScanResult, error) {
+func QueryScanResult(address string, ts int64) (ScanResult, error) {
 	db, err := sql.Open("mysql", "portscan:portscan@/portscans")
 	defer db.Close()
 	if err != nil {
@@ -99,5 +99,7 @@ func QueryScanResult(address string, ts string) (ScanResult, error) {
 			res.UDP = append(res.UDP, port)
 		}
 	}
+	res.Address = address
+	res.TS = ts
 	return res, nil
 }

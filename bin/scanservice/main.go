@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/validation"
+	"github.com/mspaulding06/portscan"
 	"regexp"
+	"time"
 )
 
 type MainController struct {
@@ -44,7 +47,43 @@ func (this *ScanController) Post() {
 			this.Ctx.WriteString("<p>Not a valid IP address or hostname</p>")
 		}
 	}
-	this.Ctx.WriteString(address)
+	resolvedAddress := portscan.ResolveHost(address)
+	if resolvedAddress == "" {
+		this.Ctx.WriteString("<p>Unknown address provided.</p>")
+	} else {
+		res, err := portscan.PortScan(resolvedAddress)
+		if err != nil {
+			this.Ctx.WriteString(err.Error())
+		}
+		this.Ctx.WriteString(`
+		<!doctype html>
+		<html>
+		<head>
+		<title>Port Scanner</title>
+		</head>
+		<body>
+		`)
+		this.Ctx.WriteString(`<p><a href="/">Back to Port Scanner</a></p>`)
+		this.WriteScanResult(res)
+		history, err := portscan.QueryScans(res.Address)
+		if err != nil {
+			this.Ctx.WriteString("<p>Unable to retrieve history</p>")
+		}
+		for _, entry := range history {
+			this.WriteScanResult(entry)
+		}
+		this.Ctx.WriteString(`
+		</body>
+		</html>
+		`)
+	}
+}
+
+func (this *ScanController) WriteScanResult(res portscan.ScanResult) {
+	this.Ctx.WriteString(fmt.Sprintf("<p>IP Address: %v</p>", res.Address))
+	this.Ctx.WriteString(fmt.Sprintf("<p>Scan Time: %v</p>", time.Unix(res.TS, 0).Local().String()))
+	this.Ctx.WriteString(fmt.Sprintf("<p>TCP Open Ports: %v</p>", res.TCP))
+	this.Ctx.WriteString(fmt.Sprintf("<p>UDP Open Ports: %v</p>", res.UDP))
 }
 
 func main() {

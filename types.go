@@ -1,14 +1,16 @@
 package portscan
 
 type ScanResult struct {
-	TS  int64 `json:"ts"`
-	TCP []int `json:"tcp"`
-	UDP []int `json:"udp"`
+	Address string `json:"address"`
+	TS      int64  `json:"ts"`
+	TCP     []int  `json:"tcp"`
+	UDP     []int  `json:"udp"`
 }
 
 type DiffResult struct {
-	Port  int    `json:"port"`
-	State string `json:"state"`
+	Address string `json:"address"`
+	Port    int    `json:"port"`
+	State   string `json:"state"`
 }
 
 type QueryResult struct {

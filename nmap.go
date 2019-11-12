@@ -20,6 +20,7 @@ func PortScan(ipAddress string) (ScanResult, error) {
 		return ScanResult{}, err
 	}
 	res, err := parseScanResult(out)
+	res.Address = ipAddress
 	res.TS = epoch
 	return res, err
 }
