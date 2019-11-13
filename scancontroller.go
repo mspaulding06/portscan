@@ -71,8 +71,30 @@ func (sc *ScanController) writeJSON() {
 		}
 		sc.Data["json"] = &message
 		sc.ServeJSON()
+		return
 	}
 	queryRes.History = history
+
+	prevTS, err := QueryLatestScan(current.Address)
+	if err != nil {
+		message := JSONError{
+			"Unable to retrieve previous scan.",
+		}
+		sc.Data["json"] = &message
+		sc.ServeJSON()
+		return
+	}
+	previous, err := QueryScanResult(current.Address, prevTS)
+	if err != nil {
+		message := JSONError{
+			"Unable to retrieve previous scan.",
+		}
+		sc.Data["json"] = &message
+		sc.ServeJSON()
+		return
+	}
+	queryRes.Diff = GenerateScanDiff(current, previous)
+
 	sc.Data["json"] = &queryRes
 	sc.ServeJSON()
 }
@@ -103,6 +125,21 @@ func (sc *ScanController) writeHTML() {
 		sc.Ctx.WriteString(fmt.Sprintf("<h2>Results for IP: %v</h2>", res.Address))
 		sc.Ctx.WriteString("<h3>Current Result</h3>")
 		sc.writeScanResultHTML(res)
+		sc.Ctx.WriteString("<h3>Diff From Previous</h3>")
+		prevTS, err := QueryLatestScan(res.Address)
+		if err != nil {
+			sc.Ctx.WriteString("<h3>Unable to retrieve previous scan</h3>")
+		}
+		previous, err := QueryScanResult(res.Address, prevTS)
+		if err != nil {
+			sc.Ctx.WriteString("<h3>Unable to retrieve previous scan</h3>")
+		}
+		diff := GenerateScanDiff(res, previous)
+		sc.Ctx.WriteString("<ul>")
+		for _, entry := range diff {
+			sc.Ctx.WriteString(fmt.Sprintf("<li>Port %v/%v was %v</li>", entry.Port, entry.Proto, entry.State))
+		}
+		sc.Ctx.WriteString("</ul>")
 		history, err := QueryScans(res.Address)
 		if err != nil {
 			sc.Ctx.WriteString("<h3>Unable to retrieve history</h3>")

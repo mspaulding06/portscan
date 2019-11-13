@@ -11,6 +11,7 @@ type ScanResult struct {
 // DiffResult provides the difference between two scans
 type DiffResult struct {
 	Port  int    `json:"port"`
+	Proto string `json:"proto"`
 	State string `json:"state"`
 }
 
