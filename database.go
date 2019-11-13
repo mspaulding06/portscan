@@ -28,20 +28,20 @@ func QueryLatestScan(address string) (int64, error) {
 	return 0, errors.New("No previous entry")
 }
 
-func InsertScan(address string, scan ScanResult) error {
+func InsertScan(scan ScanResult) error {
 	db, err := sql.Open("mysql", "portscan:portscan@/portscans")
 	defer db.Close()
 	if err != nil {
 		return err
 	}
 	for _, port := range scan.TCP {
-		_, err := db.Exec(`INSERT INTO portscans (address, ts, port, proto) values (?, ?, ?, ?)`, address, scan.TS, port, "tcp")
+		_, err := db.Exec(`INSERT INTO portscans (address, ts, port, proto) values (?, ?, ?, ?)`, scan.Address, scan.TS, port, "tcp")
 		if err != nil {
 			return err
 		}
 	}
 	for _, port := range scan.UDP {
-		_, err := db.Exec(`INSERT INTO portscans (address, ts, port, proto) values (?, ?, ?, ?)`, address, scan.TS, port, "udp")
+		_, err := db.Exec(`INSERT INTO portscans (address, ts, port, proto) values (?, ?, ?, ?)`, scan.Address, scan.TS, port, "udp")
 		if err != nil {
 			return err
 		}

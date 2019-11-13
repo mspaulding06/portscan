@@ -95,6 +95,7 @@ func (sc *ScanController) writeJSON() {
 	}
 	queryRes.Diff = GenerateScanDiff(current, previous)
 
+	InsertScan(current)
 	sc.Data["json"] = &queryRes
 	sc.ServeJSON()
 }
@@ -108,51 +109,57 @@ func (sc *ScanController) writeHTML() {
 	resolvedAddress := ResolveHost(address)
 	if resolvedAddress == "" {
 		sc.Ctx.WriteString("<p>Unknown address provided.</p>")
+		return
+	}
+
+	current, err := PortScan(resolvedAddress)
+	if err != nil {
+		sc.Ctx.WriteString(err.Error())
+	}
+	sc.Ctx.WriteString(`
+	<!doctype html>
+	<html>
+	<head>
+	<title>Port Scanner</title>
+	</head>
+	<body>
+	`)
+	sc.Ctx.WriteString(`<p><a href="/">Back to Port Scanner</a></p>`)
+	sc.Ctx.WriteString(fmt.Sprintf("<h2>Results for IP: %v</h2>", current.Address))
+	sc.Ctx.WriteString("<h3>Current Result</h3>")
+	sc.writeScanResultHTML(current)
+	sc.Ctx.WriteString("<h3>Diff From Previous</h3>")
+	prevTS, err := QueryLatestScan(current.Address)
+	if err != nil {
+		sc.Ctx.WriteString("<h3>Unable to retrieve previous scan</h3>")
+	}
+	previous, err := QueryScanResult(current.Address, prevTS)
+	if err != nil {
+		sc.Ctx.WriteString("<h3>Unable to retrieve previous scan</h3>")
+	}
+	diff := GenerateScanDiff(current, previous)
+	if len(diff) < 1 {
+		sc.Ctx.WriteString("<p>No Differences</p>")
 	} else {
-		res, err := PortScan(resolvedAddress)
-		if err != nil {
-			sc.Ctx.WriteString(err.Error())
-		}
-		sc.Ctx.WriteString(`
-		<!doctype html>
-		<html>
-		<head>
-		<title>Port Scanner</title>
-		</head>
-		<body>
-		`)
-		sc.Ctx.WriteString(`<p><a href="/">Back to Port Scanner</a></p>`)
-		sc.Ctx.WriteString(fmt.Sprintf("<h2>Results for IP: %v</h2>", res.Address))
-		sc.Ctx.WriteString("<h3>Current Result</h3>")
-		sc.writeScanResultHTML(res)
-		sc.Ctx.WriteString("<h3>Diff From Previous</h3>")
-		prevTS, err := QueryLatestScan(res.Address)
-		if err != nil {
-			sc.Ctx.WriteString("<h3>Unable to retrieve previous scan</h3>")
-		}
-		previous, err := QueryScanResult(res.Address, prevTS)
-		if err != nil {
-			sc.Ctx.WriteString("<h3>Unable to retrieve previous scan</h3>")
-		}
-		diff := GenerateScanDiff(res, previous)
 		sc.Ctx.WriteString("<ul>")
 		for _, entry := range diff {
 			sc.Ctx.WriteString(fmt.Sprintf("<li>Port %v/%v was %v</li>", entry.Port, entry.Proto, entry.State))
 		}
 		sc.Ctx.WriteString("</ul>")
-		history, err := QueryScans(res.Address)
-		if err != nil {
-			sc.Ctx.WriteString("<h3>Unable to retrieve history</h3>")
-		}
-		sc.Ctx.WriteString("<h3>Previous Results</h3>")
-		for _, entry := range history {
-			sc.writeScanResultHTML(entry)
-		}
-		sc.Ctx.WriteString(`
-		</body>
-		</html>
-		`)
 	}
+	history, err := QueryScans(current.Address)
+	if err != nil {
+		sc.Ctx.WriteString("<h3>Unable to retrieve history</h3>")
+	}
+	sc.Ctx.WriteString("<h3>Previous Result(s)</h3>")
+	for _, entry := range history {
+		sc.writeScanResultHTML(entry)
+	}
+	sc.Ctx.WriteString(`
+	</body>
+	</html>
+	`)
+	InsertScan(current)
 }
 
 func (sc *ScanController) writeScanResultHTML(res ScanResult) {

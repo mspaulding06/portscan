@@ -15,7 +15,7 @@ func main() {
 		fmt.Println(err)
 	}
 	fmt.Println(res)
-	if err := portscan.InsertScan(ipAddress, res); err != nil {
+	if err := portscan.InsertScan(res); err != nil {
 		fmt.Println(err)
 	}
 }
