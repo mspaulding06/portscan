@@ -4,12 +4,14 @@ import (
 	"github.com/astaxie/beego"
 )
 
+// MainController is the controller for the main page
 type MainController struct {
 	beego.Controller
 }
 
-func (this *MainController) Get() {
-	this.Ctx.WriteString(`
+// Get returns main page for port scanner
+func (mc *MainController) Get() {
+	mc.Ctx.WriteString(`
 	<!doctype html>
 	<html>
 	<head>
